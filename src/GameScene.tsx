@@ -16,10 +16,9 @@ const NEON = '#38bdf8'
 
 type CellMeshesProps = {
   n: number
-  onCellPointerDown: (cell: SurfaceCell, event: PointerEvent | MouseEvent) => void
 }
 
-function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
+function CellMeshes({ n }: CellMeshesProps) {
   const size = (2 / n) * 0.96
 
   return (
@@ -41,10 +40,6 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
                   position={pos}
                   quaternion={quat}
                   userData={{ cell }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation()
-                    onCellPointerDown(cell, e.nativeEvent as PointerEvent)
-                  }}
                 >
                   <planeGeometry args={[size, size]} />
                   <meshStandardMaterial
@@ -83,8 +78,14 @@ function ShellOutline() {
     return () => geometry.dispose()
   }, [geometry])
 
+  const lineRef = useRef<THREE.LineSegments>(null)
+  useEffect(() => {
+    const o = lineRef.current
+    if (o) o.raycast = () => {}
+  }, [])
+
   return (
-    <lineSegments geometry={geometry} renderOrder={2}>
+    <lineSegments ref={lineRef} geometry={geometry} renderOrder={2}>
       <lineBasicMaterial color="#22d3ee" transparent opacity={0.95} depthTest depthWrite={false} />
     </lineSegments>
   )
@@ -143,8 +144,14 @@ function FaceGridLines({ n }: { n: number }) {
     return () => segments.dispose()
   }, [segments])
 
+  const lineRef = useRef<THREE.LineSegments>(null)
+  useEffect(() => {
+    const o = lineRef.current
+    if (o) o.raycast = () => {}
+  }, [])
+
   return (
-    <lineSegments geometry={segments} renderOrder={1}>
+    <lineSegments ref={lineRef} geometry={segments} renderOrder={1}>
       <lineBasicMaterial color="#cbd5e1" transparent opacity={1} depthTest depthWrite={false} />
     </lineSegments>
   )
@@ -215,7 +222,7 @@ function SceneContent({
 }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null)
 
-  const { camera, gl, scene } = useThree()
+  const { camera, gl, scene, events } = useThree()
   const draggingRef = useRef(false)
   const lastTapRef = useRef<{ t: number; key: string } | null>(null)
   const scratch = useRef<THREE.Vector3[]>([])
@@ -229,7 +236,7 @@ function SceneContent({
       pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1
       pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(pointer, camera)
-      const hits = raycaster.intersectObjects(scene.children, true)
+      const hits = raycaster.intersectObject(scene, true)
       for (const h of hits) {
         const c = h.object.userData.cell as SurfaceCell | undefined
         if (c) return c
@@ -280,6 +287,9 @@ function SceneContent({
 
   const handleCellPointerDown = useCallback(
     (cell: SurfaceCell, native: PointerEvent | MouseEvent) => {
+      if (native instanceof PointerEvent) {
+        if (native.pointerType === 'touch' && !native.isPrimary) return
+      }
       const key = `${cell.face}:${cell.i},${cell.j}`
       const now = performance.now()
       const last = lastTapRef.current
@@ -298,11 +308,27 @@ function SceneContent({
       cubeState.beginStroke(cell)
       onPathsChange()
       if (native instanceof PointerEvent) {
-        ;(native.target as HTMLElement | undefined)?.setPointerCapture?.(native.pointerId)
+        const cap = (events.connected ?? gl.domElement) as HTMLElement | undefined
+        cap?.setPointerCapture?.(native.pointerId)
       }
     },
-    [cubeState, onPathsChange],
+    [cubeState, events.connected, gl.domElement, onPathsChange],
   )
+
+  useEffect(() => {
+    const root = (events.connected ?? gl.domElement) as HTMLElement | undefined
+    if (!root) return
+
+    const onPointerDownSurface = (ev: PointerEvent) => {
+      if (ev.button !== 0) return
+      const cell = pickCellFromClient(ev.clientX, ev.clientY)
+      if (!cell) return
+      handleCellPointerDown(cell, ev)
+    }
+
+    root.addEventListener('pointerdown', onPointerDownSurface)
+    return () => root.removeEventListener('pointerdown', onPointerDownSurface)
+  }, [events.connected, gl.domElement, handleCellPointerDown, pickCellFromClient])
 
   const tubes = useMemo(() => {
     const rows: { id: string; pts: THREE.Vector3[]; color: string }[] = []
@@ -330,7 +356,7 @@ function SceneContent({
       <ShellOutline />
 
       <FaceGridLines n={n} />
-      <CellMeshes n={n} onCellPointerDown={handleCellPointerDown} />
+      <CellMeshes n={n} />
 
       {tubes.map((t) => (
         <StrokeTube key={t.id} points={t.pts} color={t.color} radius={0.055 / n} />
@@ -340,6 +366,7 @@ function SceneContent({
         ref={controlsRef}
         makeDefault
         enablePan={false}
+        enableZoom={false}
         enableDamping
         dampingFactor={0.06}
         rotateSpeed={0.65}
@@ -355,9 +382,9 @@ function SceneContent({
           RIGHT: THREE.MOUSE.ROTATE,
         }}
         touches={{
-          // One-finger gestures are reserved for drawing on the shell.
-          ONE: THREE.TOUCH.PAN,
-          TWO: THREE.TOUCH.ROTATE,
+          // THREE.TOUCH.ROTATE(0) は二本指の switch に無く無視される。DOLLY_ROTATE + enableZoom:false で回転のみ。
+          ONE: THREE.TOUCH.DOLLY_ROTATE,
+          TWO: THREE.TOUCH.DOLLY_ROTATE,
         }}
       />
     </>

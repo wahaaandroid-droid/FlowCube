@@ -20,7 +20,7 @@ export function UIContainer({
           <div className="mt-2 text-lg font-medium text-slate-100 sm:text-xl">3×3×3 表面グリッド</div>
           <div className="mt-2 text-sm leading-relaxed text-slate-400">
             マスを押したまま隣接マスへドラッグして線を引きます。面の境界をまたいでも連続します。
-            <span className="text-slate-500">（回転: 右ドラッグ / 二本指）</span>
+            <span className="text-slate-500">（回転: 右ドラッグ / 二本指ピンチ）</span>
           </div>
         </div>
       </motion.header>
