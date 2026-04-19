@@ -28,7 +28,7 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
         <group key={basis.id}>
           {Array.from({ length: n }, (_, i) =>
             Array.from({ length: n }, (_, j) => {
-              const pos = getHitSurfacePoint(basis, i, j, n, 0.018)
+              const pos = getHitSurfacePoint(basis, i, j, n, 0.024)
               const normal = getOutwardNormal(basis.id)
               const quat = new THREE.Quaternion().setFromUnitVectors(
                 new THREE.Vector3(0, 0, 1),
@@ -52,7 +52,8 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
                     transparent
                     opacity={0.72}
                     depthWrite={true}
-                    side={THREE.DoubleSide}
+                    // DoubleSide は底面などの裏が上から見えて「影の台座」に見えるため外向きのみ
+                    side={THREE.FrontSide}
                     polygonOffset
                     polygonOffsetFactor={1}
                     polygonOffsetUnits={1}
@@ -71,7 +72,8 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
 
 function ShellOutline() {
   const geometry = useMemo(() => {
-    const box = new THREE.BoxGeometry(2.008, 2.008, 2.008)
+    // セル面よりわずかに内側で、稜線が手前に出る
+    const box = new THREE.BoxGeometry(1.998, 1.998, 1.998)
     const edges = new THREE.EdgesGeometry(box, 50)
     box.dispose()
     return edges
