@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Edges, OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -48,13 +48,16 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
                 >
                   <planeGeometry args={[size, size]} />
                   <meshStandardMaterial
-                    color="#1e293b"
+                    color="#243548"
                     transparent
-                    opacity={0.55}
+                    opacity={0.72}
                     depthWrite={true}
+                    side={THREE.DoubleSide}
                     polygonOffset
                     polygonOffsetFactor={1}
                     polygonOffsetUnits={1}
+                    emissive="#0c4a6e"
+                    emissiveIntensity={0.18}
                   />
                 </mesh>
               )
@@ -63,6 +66,25 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
         </group>
       ))}
     </group>
+  )
+}
+
+function ShellOutline() {
+  const geometry = useMemo(() => {
+    const box = new THREE.BoxGeometry(2.008, 2.008, 2.008)
+    const edges = new THREE.EdgesGeometry(box, 50)
+    box.dispose()
+    return edges
+  }, [])
+
+  useEffect(() => {
+    return () => geometry.dispose()
+  }, [geometry])
+
+  return (
+    <lineSegments geometry={geometry} renderOrder={2}>
+      <lineBasicMaterial color="#22d3ee" transparent opacity={0.95} depthTest depthWrite={false} />
+    </lineSegments>
   )
 }
 
@@ -120,8 +142,8 @@ function FaceGridLines({ n }: { n: number }) {
   }, [segments])
 
   return (
-    <lineSegments geometry={segments}>
-      <lineBasicMaterial color="#94a3b8" transparent opacity={1} depthTest />
+    <lineSegments geometry={segments} renderOrder={1}>
+      <lineBasicMaterial color="#cbd5e1" transparent opacity={1} depthTest depthWrite={false} />
     </lineSegments>
   )
 }
@@ -303,17 +325,7 @@ function SceneContent({
       <directionalLight position={[4, 6, 3]} intensity={1.35} />
       <directionalLight position={[-4, -2, -5]} intensity={0.45} />
 
-      <mesh>
-        <boxGeometry args={[2.02, 2.02, 2.02]} />
-        <meshStandardMaterial
-          color="#141c2e"
-          roughness={0.75}
-          metalness={0.12}
-          transparent
-          opacity={0.35}
-        />
-        <Edges color="#38bdf8" threshold={18} />
-      </mesh>
+      <ShellOutline />
 
       <FaceGridLines n={n} />
       <CellMeshes n={n} onCellPointerDown={handleCellPointerDown} />
