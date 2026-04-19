@@ -8,7 +8,7 @@ export function UIContainer({
   resetDisabled?: boolean
 }) {
   return (
-    <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-4 sm:p-6">
+    <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-4 sm:p-6">
       <motion.header
         className="pointer-events-none"
         initial={{ opacity: 0, y: -10 }}

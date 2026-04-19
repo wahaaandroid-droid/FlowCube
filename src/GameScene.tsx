@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { Edges, OrbitControls } from '@react-three/drei'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
@@ -48,10 +48,10 @@ function CellMeshes({ n, onCellPointerDown }: CellMeshesProps) {
                 >
                   <planeGeometry args={[size, size]} />
                   <meshStandardMaterial
-                    color="#0b1224"
+                    color="#1e293b"
                     transparent
-                    opacity={0.22}
-                    depthWrite={false}
+                    opacity={0.55}
+                    depthWrite={true}
                     polygonOffset
                     polygonOffsetFactor={1}
                     polygonOffsetUnits={1}
@@ -121,7 +121,7 @@ function FaceGridLines({ n }: { n: number }) {
 
   return (
     <lineSegments geometry={segments}>
-      <lineBasicMaterial color="#334155" transparent opacity={0.85} />
+      <lineBasicMaterial color="#94a3b8" transparent opacity={1} depthTest />
     </lineSegments>
   )
 }
@@ -297,20 +297,22 @@ function SceneContent({
 
   return (
     <>
-      <color attach="background" args={['#05060a']} />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[4, 6, 3]} intensity={1.1} />
-      <directionalLight position={[-4, -2, -5]} intensity={0.35} />
+      <color attach="background" args={['#0b1020']} />
+      <hemisphereLight intensity={0.55} color="#b8d4ff" groundColor="#1a1520" />
+      <ambientLight intensity={0.45} />
+      <directionalLight position={[4, 6, 3]} intensity={1.35} />
+      <directionalLight position={[-4, -2, -5]} intensity={0.45} />
 
       <mesh>
         <boxGeometry args={[2.02, 2.02, 2.02]} />
         <meshStandardMaterial
-          color="#0a0f1a"
-          roughness={0.9}
-          metalness={0.05}
+          color="#141c2e"
+          roughness={0.75}
+          metalness={0.12}
           transparent
-          opacity={0.08}
+          opacity={0.35}
         />
+        <Edges color="#38bdf8" threshold={18} />
       </mesh>
 
       <FaceGridLines n={n} />
@@ -366,10 +368,22 @@ export function GameScene({
 
   return (
     <Canvas
-      className="h-full w-full touch-none"
+      className="!block h-full min-h-[100svh] w-full touch-none"
+      style={{ width: '100%', height: '100%', minHeight: '100svh' }}
       dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
+      gl={{
+        antialias: true,
+        alpha: false,
+        powerPreference: 'default',
+        preserveDrawingBuffer: false,
+      }}
       camera={{ position: [2.35, 1.85, 2.65], fov: 45, near: 0.05, far: 40 }}
+      onCreated={({ gl }) => {
+        gl.setClearColor('#0b1020', 1)
+        gl.outputColorSpace = THREE.SRGBColorSpace
+        gl.toneMapping = THREE.ACESFilmicToneMapping
+        gl.toneMappingExposure = 1.15
+      }}
     >
       <SceneContent
         n={n}

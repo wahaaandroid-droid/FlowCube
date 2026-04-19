@@ -10,8 +10,10 @@ export default function App() {
   }, [])
 
   return (
-    <div className="relative h-[100svh] w-full overflow-hidden bg-[#05060a]">
-      <GameScene n={3} resetToken={resetToken} />
+    <div className="relative h-[100svh] min-h-[100dvh] w-full overflow-hidden bg-[#05060a]">
+      <div className="absolute inset-0 z-0">
+        <GameScene n={3} resetToken={resetToken} />
+      </div>
       <UIContainer onReset={handleReset} />
     </div>
   )
